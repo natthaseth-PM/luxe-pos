@@ -7,6 +7,7 @@ import { Search, UserCircle, Dot, CheckCircle2, ListChecks, DollarSign, QrCode, 
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatters";
+import { useRouter } from "next/navigation";
 
 export interface Table {
   id: string;
@@ -18,6 +19,7 @@ export interface Table {
 export default function TableManagementView() {
   const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -38,10 +40,9 @@ export default function TableManagementView() {
   }, []);
 
   return (
-    // ปรับเปลี่ยน Breakpoint เป็น lg (1024px) สำหรับ iPad แนวนอน
     <div className="flex flex-col lg:flex-row gap-6 h-full text-slate-800">
       
-      {/* ======== คอลัมน์ 1: ผังโต๊ะ ======== */}
+      {/* ======== คอลัมน์ 1: ผังโต๊ะอาหาร ======== */}
       <div className="flex-1 flex flex-col gap-6 h-full overflow-hidden">
         <header className="flex flex-col gap-4 shrink-0">
           <h1 className="text-3xl font-bold tracking-tight text-slate-800">ผังโต๊ะอาหาร</h1>
@@ -63,18 +64,17 @@ export default function TableManagementView() {
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              // เพิ่ม content-start เพื่อให้โต๊ะจัดเรียงชิดด้านบนเสมอ ไม่ยืดห่างกัน
               className="flex-1 overflow-y-auto grid grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-x-4 gap-y-6 pb-10 pr-2 content-start"
             >
               {tables.map((table) => (
-                <VisualTableItem key={table.id} table={table} />
+                <VisualTableItem key={table.id} table={table} onClick={() => router.push(`/menu?table=${table.name}`)} />
               ))}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* ======== คอลัมน์ 2: รายการอาหาร (กว้างให้พอดีกับ iPad/PC) ======== */}
+      {/* ======== คอลัมน์ 2: รายการอาหาร ======== */}
       <div className="w-full lg:w-[280px] xl:w-[320px] shrink-0 flex flex-col bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden h-full">
         <div className="p-5 pb-3 flex justify-between items-center bg-slate-50/80 border-b border-slate-100">
           <h2 className="text-lg font-bold">รายการอาหาร</h2>
@@ -148,8 +148,7 @@ export default function TableManagementView() {
   );
 }
 
-// Sub-components
-function VisualTableItem({ table }: { table: Table }) {
+function VisualTableItem({ table, onClick }: { table: Table, onClick: () => void }) {
   const getStatusStyles = (status: Table['status']) => {
     switch (status) {
       case 'available': return { table: "border-sky-200 bg-sky-50 shadow-sky-500/5", chair: "bg-sky-200", text: "text-slate-700" };
@@ -168,6 +167,7 @@ function VisualTableItem({ table }: { table: Table }) {
       <div className={`relative flex items-center justify-center p-1.5 rounded-full border-2 ${styles.table}`}>
         <motion.div
           whileTap={{ scale: 0.92 }}
+          onClick={onClick}
           className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center shadow-md cursor-pointer transition-colors duration-300 bg-white ${styles.table}`}
         >
           <span className={`text-xl font-bold ${styles.text}`}>{table.name}</span>
@@ -182,6 +182,7 @@ function VisualTableItem({ table }: { table: Table }) {
           </>
         )}
       </div>
+      <p className="text-[10px] font-bold text-slate-400">{table.capacity} ที่นั่ง</p>
     </div>
   );
 }
@@ -204,15 +205,15 @@ function ProductItem({ name, quantity, price, image }: { name: string; quantity:
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-bold text-slate-800 text-sm truncate">{name}</p>
-        <p className="text-xs font-medium text-slate-500">฿{price} / ชิ้น</p>
+        <p className="text-xs font-medium text-slate-500">฿{price}</p>
       </div>
       
       <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-100 shrink-0">
-        <button className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-slate-600 hover:text-rose-500 transition-colors">
+        <button className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-slate-600 hover:text-rose-500">
           <Minus className="w-3 h-3" />
         </button>
         <span className="text-sm font-bold text-slate-900 w-4 text-center">{quantity}</span>
-        <button className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-slate-600 hover:text-emerald-500 transition-colors">
+        <button className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-slate-600 hover:text-emerald-500">
           <Plus className="w-3 h-3" />
         </button>
       </div>
