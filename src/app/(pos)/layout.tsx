@@ -1,7 +1,10 @@
+"use client"; // บอก Next.js ว่าไฟล์นี้เป็น Client Component
+
 import React from "react";
 import Link from "next/link";
 import { LayoutGrid, UtensilsCrossed, Receipt, Settings, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,9 +24,9 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
 
         {/* Menu Icons (Touch-friendly: พื้นที่กดใหญ่อย่างน้อย 48x48px) */}
         <nav className="flex-1 flex flex-col gap-6 w-full px-4">
-          <NavButton icon={<LayoutGrid className="w-6 h-6" />} isActive label="Tables" />
-          <NavButton icon={<UtensilsCrossed className="w-6 h-6" />} label="Menu" />
-          <NavButton icon={<Receipt className="w-6 h-6" />} label="Orders" />
+          <NavButton icon={<LayoutGrid className="w-6 h-6" />} href="/tables" label="Tables" />
+          <NavButton icon={<UtensilsCrossed className="w-6 h-6" />} href="/menu" label="Menu" />
+          <NavButton icon={<Receipt className="w-6 h-6" />} href="/orders" label="Orders" />
         </nav>
 
         {/* Bottom Actions */}
@@ -67,7 +70,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Dynamic Page Content */}
-        <div className="flex-1 overflow-auto p-8">
+        <div className="flex-1 overflow-hidden p-8">
           {children}
         </div>
       </main>
@@ -75,10 +78,13 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Sub-component สำหรับปุ่ม Navigation
-function NavButton({ icon, isActive = false, label }: { icon: React.ReactNode; isActive?: boolean; label: string }) {
+// 2. แก้ไข Sub-component NavButton ด้านล่างสุด
+function NavButton({ icon, href, label }: { icon: React.ReactNode; href: string; label: string }) {
+  const pathname = usePathname();
+  const isActive = pathname === href;
+
   return (
-    <div className="flex flex-col items-center gap-1">
+    <Link href={href} className="flex flex-col items-center gap-1 w-full">
       <Button
         variant={isActive ? "default" : "ghost"}
         size="icon"
@@ -90,10 +96,10 @@ function NavButton({ icon, isActive = false, label }: { icon: React.ReactNode; i
       >
         {icon}
       </Button>
-      {/* เพิ่ม Label เล็กๆ ให้ชัดเจนขึ้นสำหรับ User */}
       <span className={`text-sm font-semibold tracking-wide mt-1 ${isActive ? "text-amber-600" : "text-slate-500"}`}>
         {label}
       </span>
-    </div>
+    </Link>
   );
 }
+
