@@ -42,7 +42,7 @@ export default function PosLayout({ children }: { children: React.ReactNode }) {
         */}
         <header className="h-[80px] w-full flex items-center justify-between px-8 bg-white/40 backdrop-blur-md border-b border-white/40 z-10 sticky top-0">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold tracking-tight">Table Management</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-800">Table Management</h1>
             <span className="px-3 py-1 bg-amber-100 text-amber-700 text-sm font-medium rounded-full">
               Lunch Shift
             </span>
@@ -91,7 +91,7 @@ function NavButton({ icon, isActive = false, label }: { icon: React.ReactNode; i
         {icon}
       </Button>
       {/* เพิ่ม Label เล็กๆ ให้ชัดเจนขึ้นสำหรับ User */}
-      <span className={`text-[10px] font-medium ${isActive ? "text-amber-600" : "text-slate-400"}`}>
+      <span className={`text-sm font-semibold tracking-wide mt-1 ${isActive ? "text-amber-600" : "text-slate-500"}`}>
         {label}
       </span>
     </div>

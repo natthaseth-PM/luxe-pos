@@ -1,11 +1,11 @@
 import React from "react";
-import TableMap from "@/components/pos/TableMap";
+import TableManagementView from "@/components/pos/TableManagementView";
 
 export default function PosHomePage() {
   return (
     <div className="h-full w-full">
-      {/* ดึงแผนผังโต๊ะมาแสดง */}
-      <TableMap />
+      {/* ดึงโครงสร้างหน้า Table Management แบบพรีเมียมมาแสดง */}
+      <TableManagementView />
     </div>
   );
 }
