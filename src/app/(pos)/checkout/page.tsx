@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Dot, DollarSign, QrCode, Tag, Coins } from "lucide-react";
+import { Search, Dot, DollarSign, QrCode, Tag, Coins, UserCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,9 +37,8 @@ export default function CheckoutPage() {
 
   const handleSelectTable = async (table: Table) => {
     setSelectedTable(table);
-    setDiscount(0); // รีเซ็ตส่วนลด
+    setDiscount(0);
     
-    // ดึงออเดอร์ที่กำลังทานอยู่ของโต๊ะนี้
     const { data: orderData } = await supabase
       .from('orders')
       .select(`id, order_items(id, quantity, menu_items(name, price))`)
@@ -49,7 +48,6 @@ export default function CheckoutPage() {
 
     if (orderData) {
       setOrderId(orderData.id);
-      // รวมข้อมูลที่ Join มาให้อ่านง่าย
       const items = orderData.order_items.map((item: any) => ({
         id: item.id,
         name: item.menu_items?.name,
@@ -66,14 +64,11 @@ export default function CheckoutPage() {
   const subtotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const netTotal = Math.max(0, subtotal - discount);
 
-  // ฟังก์ชัน ปิดบิล และ รีเซ็ต Token
   const handleCheckout = async (method: string) => {
     if (!orderId || !selectedTable) return;
     
-    // 1. อัปเดตสถานะบิลเป็นจ่ายแล้ว
     await supabase.from('orders').update({ status: 'paid', payment_method: method, total_amount: netTotal }).eq('id', orderId);
     
-    // 2. เคลียร์โต๊ะให้ว่าง และสร้าง Token ใหม่ (รีเซ็ต QR Code)
     const newToken = crypto.randomUUID(); 
     await supabase.from('tables').update({ status: 'available', session_token: newToken }).eq('id', selectedTable.id);
     
@@ -86,8 +81,6 @@ export default function CheckoutPage() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full text-slate-800">
-      
-      {/* ======== ผังโต๊ะ ======== */}
       <div className="flex-1 flex flex-col gap-6 h-full overflow-hidden">
         <header className="flex items-center gap-3 p-2 bg-white border border-slate-200 rounded-full shadow-md w-fit shrink-0">
            <FilterPill label="รอชำระเงิน" count={tables.filter(t => t.status === 'calling_bill').length} icon={<DollarSign className="w-4 h-4 text-amber-500" />} isActive />
@@ -101,7 +94,6 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* ======== รายการที่สั่ง ======== */}
       <div className="w-full lg:w-[280px] xl:w-[320px] shrink-0 flex flex-col bg-white border-l border-slate-100 h-full overflow-hidden shadow-sm">
         <div className="p-6 pb-4 flex justify-between items-center bg-slate-50/80 border-b border-slate-100">
           <h2 className="text-xl font-black">บิลโต๊ะ: {selectedTable?.name || '-'}</h2>
@@ -125,7 +117,6 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* ======== ชำระเงิน ======== */}
       <div className="w-full lg:w-[300px] xl:w-[340px] shrink-0 flex flex-col bg-white border border-slate-100 rounded-3xl shadow-sm p-6 gap-6 h-full overflow-y-auto">
         <h2 className="text-2xl font-black tracking-tighter">ชำระเงิน</h2>
         <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><Input placeholder="เบอร์โทรสมาชิก..." className="pl-10 rounded-xl h-12 text-sm font-bold bg-slate-50" /></div>
@@ -147,8 +138,8 @@ export default function CheckoutPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-3 mt-2">
-           <Button disabled={!orderId} onClick={() => handleCheckout('cash')} className="h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-lg">รับเงินสด</Button>
-           <Button disabled={!orderId} onClick={() => handleCheckout('transfer')} className="h-14 bg-sky-500 hover:bg-sky-600 text-white font-black shadow-lg">เงินโอน / QR</Button>
+           <Button disabled={!orderId} onClick={() => handleCheckout('cash')} className="h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-lg border-0">รับเงินสด</Button>
+           <Button disabled={!orderId} onClick={() => handleCheckout('transfer')} className="h-14 bg-sky-500 hover:bg-sky-600 text-white font-black shadow-lg border-0">เงินโอน / QR</Button>
         </div>
       </div>
     </div>
@@ -170,8 +161,27 @@ function VisualTableItem({ table, onClick, isSelected }: { table: Table, onClick
 
 function FilterPill({ label, count, icon, isActive = false }: { label: string; count: number; icon: React.ReactNode; isActive?: boolean }) {
   return (
-    <Badge variant="ghost" className={`flex items-center gap-2 px-4 py-2 rounded-full border ${isActive ? "bg-slate-900 text-white border-slate-900" : "text-slate-600 bg-white border-slate-100"}`}>
+    <Badge variant="ghost" className={`flex items-center gap-2 px-4 py-2 rounded-full border ${isActive ? "bg-slate-900 text-white border-slate-900 shadow-md" : "text-slate-600 bg-white border-slate-100"}`}>
       {icon}<span className="text-sm font-black">{label}</span><span className="text-xs ml-1 opacity-60">({count})</span>
     </Badge>
+  );
+}
+
+function ProductItem({ name, quantity, price, image }: { name: string; quantity: number; price: number; image: string }) {
+  return (
+    <div className="flex items-center gap-3 py-3 border-b border-slate-50">
+      <img src={image} alt={name} className="w-12 h-12 rounded-xl object-contain bg-slate-50 p-2" />
+      <div className="flex-1 min-w-0 pr-2"><p className="font-bold text-sm truncate">{name}</p><p className="text-sm font-black text-amber-600">฿{price}</p></div>
+      <span className="font-black text-lg text-slate-400">x{quantity}</span>
+    </div>
+  );
+}
+
+function PaymentButton({ label, icon, active = false }: { label: string; icon: React.ReactNode; active?: boolean }) {
+  return (
+    <button className={`w-full py-4 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 transition-all ${active ? "bg-emerald-50 border-emerald-500 text-emerald-900 shadow-lg" : "bg-slate-50 border-slate-100 text-slate-500"}`}>
+      <div className={`p-2 rounded-full ${active ? 'bg-white shadow-sm' : 'bg-transparent'}`}>{icon}</div>
+      <span className="font-black text-sm">{label}</span>
+    </button>
   );
 }

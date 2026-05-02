@@ -5,11 +5,13 @@ import Link from "next/link";
 import { LayoutGrid, UtensilsCrossed, Receipt, Settings, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
+import { Toaster } from "sonner";
 
 export default function PosLayout({ children }: { children: React.ReactNode }) {
   return (
     // พื้นหลังหลัก: ใช้สีเทาอ่อนอมอุ่นๆ หรือภาพพื้นหลังจางๆ เพื่อขับความโดดเด่นของ Glassmorphism
     <div className="flex h-screen w-full bg-[#F8F9FA] overflow-hidden text-slate-800">
+      <Toaster position="top-right" richColors />
       
       {/* Sidebar (Navigation)
         Design: Glassmorphism (กึ่งโปร่งใส + เบลอพื้นหลัง) + เงาอ่อนๆ ให้ดูมีมิติ

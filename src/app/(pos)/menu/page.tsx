@@ -62,7 +62,6 @@ function MenuContent() {
     }).filter(item => item.quantity > 0));
   };
 
-  // กรองเมนูตามหมวดหมู่ที่เลือกอย่างเดียว (เอาช่องค้นหาออกแล้ว)
   const filteredMenu = activeCategory === "all" 
     ? menuItems 
     : menuItems.filter(item => item.category_id === activeCategory);
@@ -70,7 +69,6 @@ function MenuContent() {
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // ฟังก์ชัน พิมพ์ QR Code (ขนาด 80x80mm)
   const handlePrintQR = async () => {
     const { data: settings } = await supabase.from('store_settings').select('*').maybeSingle();
     const storeName = settings?.store_name || "Luxe POS";
@@ -105,7 +103,6 @@ function MenuContent() {
     }
   };
 
-  // ฟังก์ชันส่งออเดอร์เข้าครัว
   const handleSendToKitchen = async () => {
     if (cart.length === 0) return;
     try {
@@ -142,11 +139,7 @@ function MenuContent() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full text-slate-800">
-      
-      {/* ======== ฝั่งซ้าย: หมวดหมู่และเมนู ======== */}
       <div className="flex-1 flex flex-col gap-6 h-full overflow-hidden">
-        
-        {/* แถบหมวดหมู่ด้านบน */}
         <header className="flex items-center gap-2 overflow-x-auto pb-2 shrink-0 scrollbar-hide">
           {categories.map((cat) => (
             <button
@@ -164,13 +157,10 @@ function MenuContent() {
           ))}
         </header>
 
-        {/* พื้นที่แสดงผลหลัก */}
         <div className="flex-1 overflow-y-auto pb-10">
           {loading ? (
             <div className="h-full flex items-center justify-center font-bold text-slate-400">กำลังโหลดเมนู...</div>
           ) : activeCategory === "all" ? (
-            
-            /* แสดงการ์ดหมวดหมู่ */
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 content-start pr-2">
               {categories.filter(c => c.id !== 'all').map(cat => (
                 <motion.div
@@ -189,48 +179,38 @@ function MenuContent() {
                 </motion.div>
               ))}
             </div>
-            
           ) : (
-            
-            /* แสดงรายการอาหาร */
             <div className="flex flex-col gap-6 pr-2">
               <button onClick={() => setActiveCategory("all")} className="flex items-center gap-2 text-md font-black text-slate-500 hover:text-amber-600 transition-colors w-fit bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100">
                 <ChevronLeft className="w-5 h-5" /> กลับไปเลือกหมวดหมู่
               </button>
-              
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 content-start">
-                {filteredMenu.length === 0 ? (
-                  <div className="col-span-full text-center text-slate-400 py-10 font-bold">ไม่พบเมนูอาหารในหมวดหมู่นี้</div>
-                ) : (
-                  filteredMenu.map((item) => (
-                    <motion.div
-                      key={item.id}
-                      onClick={() => addToCart(item)}
-                      whileHover={{ y: -5 }}
-                      className="bg-white rounded-3xl p-4 border-2 border-slate-50 shadow-md flex flex-col gap-3 cursor-pointer hover:border-amber-200 transition-colors group"
-                    >
-                      <div className="aspect-square bg-slate-50 rounded-2xl p-4 flex items-center justify-center overflow-hidden">
-                        <img src={item.image_url} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
+                {filteredMenu.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    onClick={() => addToCart(item)}
+                    whileHover={{ y: -5 }}
+                    className="bg-white rounded-3xl p-4 border-2 border-slate-50 shadow-md flex flex-col gap-3 cursor-pointer hover:border-amber-200 transition-colors group"
+                  >
+                    <div className="aspect-square bg-slate-50 rounded-2xl p-4 flex items-center justify-center overflow-hidden">
+                      <img src={item.image_url} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                    <div className="flex flex-col flex-1">
+                      <h3 className="font-bold text-slate-800 line-clamp-2">{item.name}</h3>
+                      <div className="mt-auto pt-3 flex items-center justify-between">
+                        <span className="font-black text-amber-600 text-lg">{formatCurrency(item.price)}</span>
+                        <div className="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center group-hover:bg-amber-500 transition-colors"><Plus className="w-4 h-4" /></div>
                       </div>
-                      <div className="flex flex-col flex-1">
-                        <h3 className="font-bold text-slate-800 line-clamp-2">{item.name}</h3>
-                        <div className="mt-auto pt-3 flex items-center justify-between">
-                          <span className="font-black text-amber-600 text-lg">{formatCurrency(item.price)}</span>
-                          <div className="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center group-hover:bg-amber-500 transition-colors"><Plus className="w-4 h-4" /></div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* ======== ฝั่งขวา: ตะกร้าสินค้า ======== */}
       <div className="w-full lg:w-[350px] shrink-0 flex flex-col bg-white border-l border-slate-100 rounded-3xl shadow-xl h-full overflow-hidden">
-        
         <div className="p-6 bg-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <ShoppingCart className="w-6 h-6 text-amber-400" />
@@ -257,12 +237,12 @@ function MenuContent() {
                 >
                   <div className="flex-1 min-w-0 pr-3">
                     <p className="font-bold text-slate-800 text-sm truncate">{item.name}</p>
-                    <p className="text-sm font-black text-amber-600 mt-1">{formatCurrency(item.price * item.quantity)}</p>
+                    <p className="text-sm font-bold text-amber-600 mt-1">{formatCurrency(item.price * item.quantity)}</p>
                   </div>
                   
                   <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100 shrink-0">
                     <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, -1); }} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 hover:text-rose-500 transition-colors">
-                      {item.quantity === 1 ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+                      {item.quantity === 1 ? <Trash2 className="w-4 h-4 text-rose-500" /> : <Minus className="w-4 h-4" />}
                     </button>
                     <span className="font-black text-slate-900 w-5 text-center">{item.quantity}</span>
                     <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, 1); }} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 hover:text-emerald-500 transition-colors">
@@ -281,18 +261,18 @@ function MenuContent() {
             <span className="text-2xl text-amber-600">{formatCurrency(cartTotal)}</span>
           </div>
           
-          <Button onClick={handlePrintQR} variant="outline" className="w-full h-12 rounded-xl border-sky-300 text-sky-700 hover:bg-sky-50 bg-white shadow-sm font-black">
+          <Button onClick={handlePrintQR} variant="outline" className="w-full h-12 rounded-xl border-sky-300 text-sky-700 hover:bg-sky-50 bg-white shadow-sm font-black border-0">
             <Printer className="w-4 h-4 mr-2" /> พิมพ์สลิป QR สั่งอาหาร
           </Button>
           
           <div className="flex gap-3">
-            <Button onClick={() => setCart([])} variant="outline" className="w-14 h-14 rounded-2xl border-rose-200 text-rose-500 hover:bg-rose-50 shadow-sm bg-white">
+            <Button onClick={() => setCart([])} variant="outline" className="w-14 h-14 rounded-2xl border-rose-200 text-rose-500 hover:bg-rose-50 shadow-sm bg-white border-0">
               <Trash2 className="w-6 h-6" />
             </Button>
             <Button 
               onClick={handleSendToKitchen}
               disabled={cart.length === 0} 
-              className="flex-1 h-14 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xl shadow-lg shadow-amber-500/20 disabled:opacity-50"
+              className="flex-1 h-14 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xl shadow-lg shadow-amber-500/20 disabled:opacity-50 border-0"
             >
               ส่งเข้าห้องครัว
             </Button>
@@ -304,7 +284,6 @@ function MenuContent() {
   );
 }
 
-// Wrapping ให้อยู่ใน Suspense ตามข้อบังคับของ Next.js App Router เมื่อใช้ useSearchParams
 export default function MenuPage() {
   return (
     <Suspense fallback={<div className="h-full flex items-center justify-center font-bold text-slate-400">กำลังเตรียมหน้าจอ...</div>}>
