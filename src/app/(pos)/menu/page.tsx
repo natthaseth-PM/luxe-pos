@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense, useRef } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart, Trash2, Printer, Minus, Plus, ChevronLeft } from "lucide-react";
+import { ShoppingCart, Trash2, Printer, Minus, Plus, ChevronLeft, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/formatters";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ function MenuContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tableName = searchParams.get("table");
+  const isInitialMount = useRef(true); // ใช้ป้องกัน Toast เด้งซ้อนตอนโหลดหน้า
 
   const [categories, setCategories] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
@@ -24,10 +26,11 @@ function MenuContent() {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   useEffect(() => {
-    // บังคับเลือกโต๊ะก่อนเสมอ
-    if (!tableName) {
+    // บังคับเลือกโต๊ะก่อน และป้องกัน Toast ซ้อน
+    if (!tableName && isInitialMount.current) {
       toast.error("กรุณาเลือกโต๊ะก่อนสั่งอาหาร!");
       router.push("/");
+      isInitialMount.current = false;
       return;
     }
 
@@ -69,11 +72,14 @@ function MenuContent() {
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  // ปรับปรุงฟังก์ชันบันทึกออเดอร์ลง Supabase
   const handleSendToKitchen = async () => {
     if (cart.length === 0) return;
+    const loadingToast = toast.loading("กำลังส่งออเดอร์เข้าครัว...");
+    
     try {
       const { data: tableData } = await supabase.from('tables').select('id').eq('name', tableName).single();
-      if (!tableData) return toast.error('ไม่พบข้อมูลโต๊ะ');
+      if (!tableData) throw new Error('ไม่พบข้อมูลโต๊ะ');
 
       let orderId;
       const { data: existingOrder } = await supabase.from('orders').select('id').eq('table_id', tableData.id).eq('status', 'dining').maybeSingle();
@@ -81,7 +87,8 @@ function MenuContent() {
       if (existingOrder) {
         orderId = existingOrder.id;
       } else {
-        const { data: newOrder } = await supabase.from('orders').insert([{ table_id: tableData.id, status: 'dining', total_amount: 0 }]).select().single();
+        const { data: newOrder, error: orderError } = await supabase.from('orders').insert([{ table_id: tableData.id, status: 'dining', total_amount: 0 }]).select().single();
+        if (orderError) throw orderError;
         orderId = newOrder?.id;
         await supabase.from('tables').update({ status: 'occupied' }).eq('id', tableData.id);
       }
@@ -93,11 +100,14 @@ function MenuContent() {
         status: 'pending'
       }));
 
-      await supabase.from('order_items').insert(itemsToInsert);
+      const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
+      if (itemsError) throw itemsError;
+
       setCart([]); 
-      toast.success('ส่งออเดอร์เข้าห้องครัวเรียบร้อยแล้ว! 🍳');
-    } catch (err) {
-      toast.error('เกิดข้อผิดพลาดในการส่งออเดอร์');
+      toast.success('ส่งออเดอร์เข้าครัวเรียบร้อยแล้ว! 🍳', { id: loadingToast });
+    } catch (err: any) {
+      console.error("Database Error:", err);
+      toast.error(`ส่งออเดอร์ไม่สำเร็จ: ${err.message}`, { id: loadingToast });
     }
   };
 
@@ -139,7 +149,7 @@ function MenuContent() {
           ) : activeCategory === "all" ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pr-2">
               {categories.filter(c => c.id !== 'all').map(cat => (
-                <motion.div key={cat.id} onClick={() => setActiveCategory(cat.id)} whileHover={{ scale: 1.05 }} className="bg-white rounded-3xl p-8 border-2 border-slate-100 shadow-xl cursor-pointer flex flex-col items-center gap-4 aspect-square hover:border-amber-200">
+                <motion.div key={cat.id} onClick={() => setActiveCategory(cat.id)} whileHover={{ scale: 1.05 }} className="bg-white rounded-3xl p-8 border-2 border-slate-100 shadow-xl cursor-pointer flex flex-col items-center gap-4 aspect-square hover:border-amber-200 transition-all">
                   <span className="text-5xl">{cat.name === 'ต้ม' ? '🍲' : cat.name === 'ผัด' ? '🥘' : cat.name === 'แกง' ? '🍛' : cat.name === 'ทอด' ? '🍤' : '🍹'}</span>
                   <div className="text-center"><h3 className="text-2xl font-black text-slate-800">{cat.name}</h3><p className="text-sm font-bold text-slate-400 mt-1">{menuItems.filter(m => m.category_id === cat.id).length} รายการ</p></div>
                 </motion.div>
@@ -152,7 +162,7 @@ function MenuContent() {
                 {filteredMenu.map((item) => (
                   <motion.div key={item.id} onClick={() => addToCart(item)} whileHover={{ y: -5 }} className="bg-white rounded-3xl p-4 border-2 border-slate-50 shadow-md flex flex-col gap-3 cursor-pointer hover:border-amber-200 group">
                     <div className="aspect-square bg-slate-50 rounded-2xl p-4 flex items-center justify-center overflow-hidden"><img src={item.image_url} alt={item.name} className="w-full h-full object-contain group-hover:scale-110 transition-all" /></div>
-                    <div className="flex flex-col flex-1"><h3 className="font-bold text-slate-800 line-clamp-2">{item.name}</h3><div className="mt-auto pt-3 flex items-center justify-between"><span className="font-black text-amber-600 text-lg">{formatCurrency(item.price)}</span><div className="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center group-hover:bg-amber-500 transition-colors"><Plus className="w-4 h-4" /></div></div></div>
+                    <div className="flex flex-col flex-1"><h3 className="font-bold text-slate-800 line-clamp-2">{item.name}</h3><div className="mt-auto pt-3 flex items-center justify-between"><span className="font-black text-amber-600 text-lg">{formatCurrency(item.price)}</span><div className="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center group-hover:bg-amber-500 transition-colors shadow-inner"><Plus className="w-4 h-4" /></div></div></div>
                   </motion.div>
                 ))}
               </div>
@@ -164,7 +174,7 @@ function MenuContent() {
       <div className="w-full lg:w-[350px] shrink-0 flex flex-col bg-white border-l border-slate-100 h-full overflow-hidden shadow-2xl">
         <div className="p-6 bg-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3"><ShoppingCart className="w-6 h-6 text-amber-400" /><h2 className="text-xl font-bold">ออเดอร์ใหม่</h2></div>
-          <Badge className="bg-amber-500 text-white px-3 py-1 font-black">โต๊ะ {tableName}</Badge>
+          <Badge className="bg-amber-500 text-white px-3 py-1 font-black border-0">โต๊ะ {tableName}</Badge>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -173,9 +183,11 @@ function MenuContent() {
               <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} key={item.id} className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div className="flex-1 min-w-0 pr-3"><p className="font-bold text-slate-800 text-sm truncate">{item.name}</p><p className="text-sm font-black text-amber-600">{formatCurrency(item.price * item.quantity)}</p></div>
                 <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100 shrink-0">
-                  <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, -1); }} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 hover:text-rose-500">{item.quantity === 1 ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}</button>
+                  <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, -1); }} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 hover:text-rose-500 transition-colors">
+                    {item.quantity === 1 ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+                  </button>
                   <span className="font-black w-5 text-center">{item.quantity}</span>
-                  <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, 1); }} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-emerald-500"><Plus className="w-4 h-4" /></button>
+                  <button onClick={(e) => { e.stopPropagation(); updateQuantity(item.id, 1); }} className="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-emerald-500 hover:text-emerald-600 transition-colors"><Plus className="w-4 h-4" /></button>
                 </div>
               </motion.div>
             ))}</AnimatePresence>
@@ -184,7 +196,7 @@ function MenuContent() {
 
         <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col gap-4">
           <div className="flex justify-between items-center font-black"><span>รวมทั้งหมด ({cartItemCount})</span><span className="text-2xl text-amber-600">{formatCurrency(cartTotal)}</span></div>
-          <Button onClick={handlePrintQR} variant="outline" className="w-full h-12 border-sky-300 text-sky-700 font-black rounded-xl shadow-sm"><Printer className="w-4 h-4 mr-2" /> พิมพ์ใบสแกนสั่งอาหาร</Button>
+          <Button onClick={handlePrintQR} variant="outline" className="w-full h-12 border-sky-300 text-sky-700 font-black rounded-xl shadow-sm bg-white"><Printer className="w-4 h-4 mr-2" /> พิมพ์ใบสแกนสั่งอาหาร</Button>
           <Button onClick={handleSendToKitchen} disabled={cart.length === 0} className="w-full h-16 bg-amber-500 text-white font-black text-xl rounded-2xl shadow-xl hover:bg-amber-600 transition-all">ส่งเข้าห้องครัว</Button>
         </div>
       </div>
