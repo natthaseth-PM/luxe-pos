@@ -25,12 +25,21 @@ function MenuContent() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const { data: cats } = await supabase.from("categories").select("*").order("sort_order");
-      if (cats) setCategories([{ id: "all", name: "ทั้งหมด" }, ...cats]);
+      try {
+        // ดึงหมวดหมู่
+        const { data: cats, error: catError } = await supabase.from("categories").select("*").order("name");
+        if (catError) console.error("Category Error:", catError);
+        if (cats) setCategories([{ id: "all", name: "ทั้งหมด" }, ...cats]);
 
-      const { data: items } = await supabase.from("menu_items").select("*");
-      if (items) setMenuItems(items);
-      setLoading(false);
+        // ดึงเมนูอาหาร
+        const { data: items, error: itemError } = await supabase.from("menu_items").select("*");
+        if (itemError) console.error("Items Error:", itemError);
+        if (items) setMenuItems(items);
+      } catch (err) {
+        console.error("Fetch Error:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, []);
@@ -54,6 +63,7 @@ function MenuContent() {
     }).filter(item => item.quantity > 0));
   };
 
+  // ตรรกะการกรองที่ถูกต้อง
   const filteredMenu = menuItems.filter(item => {
     const matchCategory = activeCategory === "all" || item.category_id === activeCategory;
     const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -112,7 +122,10 @@ function MenuContent() {
             {categories.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => {
+                  setActiveCategory(cat.id);
+                  setSearchQuery(""); // ล้างคำค้นหาเมื่อเปลี่ยนหมวด
+                }}
                 className={`relative px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors duration-300 ${
                   activeCategory === cat.id ? "text-white" : "text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
                 }`}
@@ -129,10 +142,7 @@ function MenuContent() {
             <Input 
               placeholder="ค้นหาเมนู..." 
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                if (activeCategory === "all") setActiveCategory(categories[1]?.id || "all");
-              }}
+              onChange={(e) => setSearchQuery(e.target.value)} // แก้บั๊ก: ให้พิมพ์ค้นหาได้อิสระโดยไม่เด้งเปลี่ยนหมวด
               className="pl-10 rounded-full bg-white border-slate-200 shadow-sm" 
             />
           </div>
@@ -140,7 +150,7 @@ function MenuContent() {
 
         <div className="flex-1 overflow-y-auto pb-10">
           {loading ? (
-            <div className="text-center text-slate-400 py-10">กำลังโหลด...</div>
+            <div className="h-full flex items-center justify-center text-slate-400">กำลังโหลดเมนู...</div>
           ) : (activeCategory === "all" && searchQuery === "") ? (
             /* ================= แสดงการ์ดหมวดหมู่ ================= */
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-6 content-start">
@@ -178,7 +188,10 @@ function MenuContent() {
               
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 content-start">
                 {filteredMenu.length === 0 ? (
-                  <div className="col-span-full text-center text-slate-400 py-10">ไม่พบเมนูที่คุณค้นหา</div>
+                  <div className="col-span-full text-center text-slate-400 py-10 mt-10">
+                    <p className="text-lg font-bold">ไม่พบเมนูอาหาร</p>
+                    <p className="text-sm mt-2">(ถ้าหมวดหมู่มี "0 รายการ" ให้ตรวจสอบ UUID ใน Supabase ครับ)</p>
+                  </div>
                 ) : (
                   <AnimatePresence mode="popLayout">
                     {filteredMenu.map((item) => (
@@ -289,7 +302,7 @@ function MenuContent() {
 
 export default function MenuPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-500">กำลังโหลด...</div>}>
+    <Suspense fallback={<div className="h-full flex items-center justify-center text-slate-500">กำลังเตรียมหน้าจอ...</div>}>
       <MenuContent />
     </Suspense>
   );

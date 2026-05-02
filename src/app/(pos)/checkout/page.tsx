@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, UserCircle, Dot, CheckCircle2, ListChecks, DollarSign, QrCode, Tag, Coins } from "lucide-react";
+import { motion } from "framer-motion";
+import { Search, Dot, DollarSign, QrCode, Tag, Coins } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatters";
@@ -26,7 +26,6 @@ export default function CheckoutPage() {
       const { data, error } = await supabase.from("tables").select("*").order("name");
       if (!error && data) {
         setTables(data as Table[]);
-        // เลือกโต๊ะแรกที่ "เรียกเช็คบิล" หรือ "มีลูกค้า" เป็นค่าเริ่มต้น
         const firstActive = data.find(t => t.status !== 'available');
         if (firstActive) setSelectedTable(firstActive.name);
       }
@@ -38,12 +37,12 @@ export default function CheckoutPage() {
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full text-slate-800">
       
-      {/* ======== คอลัมน์ 1: ผังโต๊ะ ======== */}
+      {/* ======== ผังโต๊ะ ======== */}
       <div className="flex-1 flex flex-col gap-6 h-full overflow-hidden">
         <header className="flex flex-col gap-4 shrink-0">
           <div className="flex items-center gap-2.5 p-1.5 bg-white border border-slate-200 rounded-full shadow-sm overflow-x-auto w-fit">
-             <FilterPill label="รอชำระเงิน" count={tables.filter(t => t.status === 'calling_bill').length} icon={<DollarSign className="w-4 h-4 text-rose-500" />} isActive />
-             <FilterPill label="กำลังทาน" count={tables.filter(t => t.status === 'occupied').length} icon={<Dot className="w-6 h-6 text-amber-500 -ml-1" />} />
+             <FilterPill label="รอชำระเงิน" count={tables.filter(t => t.status === 'calling_bill').length} icon={<DollarSign className="w-4 h-4 text-amber-500" />} isActive />
+             <FilterPill label="กำลังทาน" count={tables.filter(t => t.status === 'occupied').length} icon={<Dot className="w-6 h-6 text-rose-500 -ml-1" />} />
           </div>
         </header>
 
@@ -59,14 +58,13 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* ======== คอลัมน์ 2: รายการที่สั่งของโต๊ะที่เลือก ======== */}
+      {/* ======== รายการที่สั่ง ======== */}
       <div className="w-full lg:w-[280px] xl:w-[320px] shrink-0 flex flex-col bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden h-full">
         <div className="p-5 pb-3 flex justify-between items-center bg-slate-50/80 border-b border-slate-100">
           <h2 className="text-lg font-bold">บิล: {selectedTable || '-'}</h2>
           <span className="text-xs font-semibold text-slate-500">จำนวน</span>
         </div>
         
-        {/* ข้อมูลจำลอง (Mock Data) เปลี่ยนตามโต๊ะที่เลือก */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {selectedTable ? (
             <>
@@ -79,7 +77,7 @@ export default function CheckoutPage() {
         </div>
       </div>
 
-      {/* ======== คอลัมน์ 3: ชำระเงิน ======== */}
+      {/* ======== ชำระเงิน ======== */}
       <div className="w-full lg:w-[300px] xl:w-[340px] shrink-0 flex flex-col bg-white border border-slate-100 rounded-3xl shadow-sm p-6 gap-6 h-full overflow-y-auto">
         <h2 className="text-xl font-bold tracking-tight">ชำระเงิน {selectedTable && `(${selectedTable})`}</h2>
         
@@ -91,7 +89,7 @@ export default function CheckoutPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 mt-2">
-          <PaymentButton label="เงินสด (Cash)" icon={<DollarSign className="w-6 h-6 text-sky-500"/>} active />
+          <PaymentButton label="เงินสด (Cash)" icon={<DollarSign className="w-6 h-6 text-emerald-500"/>} active />
           <PaymentButton label="โอนเงิน (QR)" icon={<QrCode className="w-6 h-6 text-slate-700"/>} />
         </div>
 
@@ -116,13 +114,12 @@ export default function CheckoutPage() {
   );
 }
 
-// Sub-components
 function VisualTableItem({ table, onClick, isSelected }: { table: Table, onClick: () => void, isSelected: boolean }) {
   const getStatusStyles = (status: Table['status']) => {
     switch (status) {
-      case 'available': return { table: "border-sky-200 bg-sky-50", chair: "bg-sky-200", text: "text-slate-700" };
-      case 'occupied': return { table: "border-amber-300 bg-amber-50", chair: "bg-amber-300", text: "text-slate-800" };
-      case 'calling_bill': return { table: "border-emerald-300 bg-emerald-50", chair: "bg-emerald-300", text: "text-slate-800" };
+      case 'available': return { ring: "border-emerald-500 bg-emerald-100", circle: "text-emerald-700", chair: "bg-emerald-500" };
+      case 'occupied': return { ring: "border-rose-500 bg-rose-100", circle: "text-rose-700", chair: "bg-rose-500" };
+      case 'calling_bill': return { ring: "border-amber-500 bg-amber-100", circle: "text-amber-700", chair: "bg-amber-500" };
     }
   };
 
@@ -133,17 +130,17 @@ function VisualTableItem({ table, onClick, isSelected }: { table: Table, onClick
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className={`relative flex items-center justify-center p-1.5 rounded-full border-2 transition-all ${isSelected ? 'border-rose-400 scale-110 shadow-lg' : styles.table}`}>
+      <div className={`relative flex items-center justify-center p-2 rounded-full border-4 transition-all ${isSelected ? 'border-slate-800 bg-slate-200 scale-110 shadow-lg' : styles.ring}`}>
         <motion.div
           whileTap={{ scale: 0.92 }}
           onClick={onClick}
-          className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center shadow-md cursor-pointer transition-colors duration-300 bg-white ${styles.table}`}
+          className={`relative w-20 h-20 rounded-full flex flex-col items-center justify-center bg-white shadow-xl cursor-pointer transition-colors duration-300 ${styles.circle}`}
         >
-          <span className={`text-xl font-bold ${styles.text}`}>{table.name}</span>
+          <span className="text-2xl font-black">{table.name}</span>
         </motion.div>
 
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 flex gap-2">{chairs.slice(0, 2)}</div>
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-2">{chairs.slice(2, 4)}</div>
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex gap-2">{chairs.slice(0, 2)}</div>
+        <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 flex gap-2">{chairs.slice(2, 4)}</div>
       </div>
     </div>
   );
@@ -176,7 +173,7 @@ function ProductItem({ name, quantity, price, image }: { name: string; quantity:
 
 function PaymentButton({ label, icon, active = false }: { label: string; icon: React.ReactNode; active?: boolean }) {
   return (
-    <button className={`w-full aspect-[4/3] flex flex-col items-center justify-center p-4 gap-2.5 rounded-2xl border transition-all ${active ? "bg-[#E6F3FE] border-sky-200 text-slate-800 shadow-md shadow-sky-500/10" : "bg-[#FAF7F0] border-[#EEE7DA] text-slate-700 hover:bg-[#FDEBCE]"}`}>
+    <button className={`w-full aspect-[4/3] flex flex-col items-center justify-center p-4 gap-2.5 rounded-2xl border transition-all ${active ? "bg-emerald-50 border-emerald-200 text-slate-800 shadow-md shadow-emerald-500/10" : "bg-[#FAF7F0] border-[#EEE7DA] text-slate-700 hover:bg-[#FDEBCE]"}`}>
       <div className="p-2 bg-white rounded-full shadow-sm">{icon}</div>
       <span className="font-bold text-sm">{label}</span>
     </button>
