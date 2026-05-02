@@ -5,12 +5,14 @@ import { supabase } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus, ShoppingCart, Trash2, Printer, Minus, ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { formatCurrency } from "@/lib/formatters";
+import { Badge } from "@/components/ui/badge"; // <-- เพิ่มตรงนี้
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/formatters";
 import { useSearchParams } from "next/navigation";
 
 interface CartItem { id: string; name: string; price: number; quantity: number; image_url: string; }
 
+// สร้าง Component แยกสำหรับเนื้อหา เพื่อให้ใช้ useSearchParams ได้อย่างปลอดภัย
 function MenuContent() {
   const searchParams = useSearchParams();
   const tableName = searchParams.get("table") || "สั่งกลับบ้าน";
@@ -26,14 +28,10 @@ function MenuContent() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // ดึงหมวดหมู่
-        const { data: cats, error: catError } = await supabase.from("categories").select("*").order("name");
-        if (catError) console.error("Category Error:", catError);
+        const { data: cats } = await supabase.from("categories").select("*").order("name");
         if (cats) setCategories([{ id: "all", name: "ทั้งหมด" }, ...cats]);
 
-        // ดึงเมนูอาหาร
-        const { data: items, error: itemError } = await supabase.from("menu_items").select("*");
-        if (itemError) console.error("Items Error:", itemError);
+        const { data: items } = await supabase.from("menu_items").select("*");
         if (items) setMenuItems(items);
       } catch (err) {
         console.error("Fetch Error:", err);
@@ -56,14 +54,11 @@ function MenuContent() {
 
   const updateQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
-      if (item.id === id) {
-        return { ...item, quantity: item.quantity + delta };
-      }
+      if (item.id === id) return { ...item, quantity: item.quantity + delta };
       return item;
     }).filter(item => item.quantity > 0));
   };
 
-  // ตรรกะการกรองที่ถูกต้อง
   const filteredMenu = menuItems.filter(item => {
     const matchCategory = activeCategory === "all" || item.category_id === activeCategory;
     const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -74,43 +69,38 @@ function MenuContent() {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handlePrintQR = async () => {
-    try {
-      const { data: settings } = await supabase.from('store_settings').select('*').single();
-      const storeName = settings?.store_name || "Luxe POS";
-      const wifiPass = settings?.wifi_password || "ไม่มี";
-      const message = settings?.receipt_message || "ขอบคุณที่ใช้บริการ";
+    const { data: settings } = await supabase.from('store_settings').select('*').single();
+    const storeName = settings?.store_name || "Luxe POS";
+    const wifiPass = settings?.wifi_password || "ไม่มี";
+    const message = settings?.receipt_message || "ขอบคุณที่ใช้บริการ";
 
-      const printWindow = window.open('', '_blank', 'width=400,height=600');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>QR Code - โต๊ะ ${tableName}</title>
-              <style>
-                @page { size: 80mm auto; margin: 0; }
-                body { width: 80mm; padding: 5mm; margin: 0; text-align: center; font-family: 'Kanit', sans-serif; box-sizing: border-box; }
-                .title { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
-                .wifi { font-size: 14px; margin-bottom: 15px; color: #555; }
-                .table-name { font-size: 24px; font-weight: 900; background: #000; color: #fff; padding: 5px; border-radius: 5px; display: inline-block; margin-bottom: 10px;}
-                img { width: 50mm; height: 50mm; margin: 0 auto; display: block; }
-                .footer { font-size: 14px; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px; font-weight: bold;}
-              </style>
-            </head>
-            <body>
-              <div class="title">${storeName}</div>
-              <div class="wifi">Wi-Fi: ${wifiPass}</div>
-              <div class="table-name">โต๊ะ: ${tableName}</div>
-              <p style="font-size: 14px; margin-bottom: 5px;">สแกน QR เพื่อสั่งอาหารด้วยตัวเอง</p>
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://luxe-pos.app/order/${tableName}" />
-              <div class="footer">${message}</div>
-              <script>window.onload = () => { window.print(); window.close(); }</script>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-      }
-    } catch (error) {
-      console.error("ไม่สามารถดึงข้อมูลร้านได้", error);
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>QR Code - โต๊ะ ${tableName}</title>
+            <style>
+              @page { size: 80mm auto; margin: 0; }
+              body { width: 80mm; padding: 5mm; margin: 0; text-align: center; font-family: 'Kanit', sans-serif; box-sizing: border-box; }
+              .title { font-size: 22px; font-weight: bold; margin-bottom: 5px; }
+              .table-name { font-size: 24px; font-weight: 900; background: #000; color: #fff; padding: 5px; border-radius: 5px; display: inline-block; margin-bottom: 10px;}
+              img { width: 50mm; height: 50mm; margin: 0 auto; display: block; }
+              .footer { font-size: 14px; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px; font-weight: bold;}
+            </style>
+          </head>
+          <body>
+            <div class="title">${storeName}</div>
+            <div style="font-size:12px; margin-bottom:10px;">Wi-Fi: ${wifiPass}</div>
+            <div class="table-name">โต๊ะ: ${tableName}</div>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://luxe-pos.app/order/${tableName}" />
+            <p style="font-size:12px; margin-top:5px;">สแกนเพื่อสั่งอาหารด้วยตนเอง</p>
+            <div class="footer">${message}</div>
+            <script>window.onload = () => { window.print(); window.close(); }</script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
     }
   };
 
@@ -122,10 +112,7 @@ function MenuContent() {
             {categories.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => {
-                  setActiveCategory(cat.id);
-                  setSearchQuery(""); // ล้างคำค้นหาเมื่อเปลี่ยนหมวด
-                }}
+                onClick={() => { setActiveCategory(cat.id); setSearchQuery(""); }}
                 className={`relative px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors duration-300 ${
                   activeCategory === cat.id ? "text-white" : "text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
                 }`}
@@ -137,12 +124,16 @@ function MenuContent() {
               </button>
             ))}
           </div>
+
           <div className="relative w-full md:w-64 shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input 
               placeholder="ค้นหาเมนู..." 
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)} // แก้บั๊ก: ให้พิมพ์ค้นหาได้อิสระโดยไม่เด้งเปลี่ยนหมวด
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (activeCategory === "all") setActiveCategory(categories[1]?.id || "all");
+              }}
               className="pl-10 rounded-full bg-white border-slate-200 shadow-sm" 
             />
           </div>
@@ -152,7 +143,6 @@ function MenuContent() {
           {loading ? (
             <div className="h-full flex items-center justify-center text-slate-400">กำลังโหลดเมนู...</div>
           ) : (activeCategory === "all" && searchQuery === "") ? (
-            /* ================= แสดงการ์ดหมวดหมู่ ================= */
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-6 content-start">
               {categories.filter(c => c.id !== 'all').map(cat => {
                 const itemCount = menuItems.filter(m => m.category_id === cat.id).length;
@@ -178,7 +168,6 @@ function MenuContent() {
               })}
             </div>
           ) : (
-            /* ================= แสดงรายการอาหาร ================= */
             <div className="flex flex-col gap-4 h-full">
               {activeCategory !== "all" && (
                 <button onClick={() => setActiveCategory("all")} className="flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-800 w-fit">
@@ -188,10 +177,7 @@ function MenuContent() {
               
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 content-start">
                 {filteredMenu.length === 0 ? (
-                  <div className="col-span-full text-center text-slate-400 py-10 mt-10">
-                    <p className="text-lg font-bold">ไม่พบเมนูอาหาร</p>
-                    <p className="text-sm mt-2">(ถ้าหมวดหมู่มี "0 รายการ" ให้ตรวจสอบ UUID ใน Supabase ครับ)</p>
-                  </div>
+                  <div className="col-span-full text-center text-slate-400 py-10 mt-10">ไม่พบเมนูอาหาร</div>
                 ) : (
                   <AnimatePresence mode="popLayout">
                     {filteredMenu.map((item) => (
@@ -227,14 +213,13 @@ function MenuContent() {
         </div>
       </div>
 
-      {/* ======== ฝั่งขวา: ตะกร้าสินค้า ======== */}
       <div className="w-full lg:w-[320px] xl:w-[360px] shrink-0 flex flex-col bg-white border border-slate-100 rounded-3xl shadow-sm h-full overflow-hidden">
         <div className="p-5 bg-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <ShoppingCart className="w-5 h-5 text-amber-400" />
             <h2 className="text-xl font-bold">ออเดอร์</h2>
           </div>
-          <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold">โต๊ะ {tableName}</span>
+          <Badge className="bg-amber-500 text-white px-3 py-1 font-black border-0">โต๊ะ {tableName}</Badge>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
@@ -302,7 +287,8 @@ function MenuContent() {
 
 export default function MenuPage() {
   return (
-    <Suspense fallback={<div className="h-full flex items-center justify-center text-slate-500">กำลังเตรียมหน้าจอ...</div>}>
+    // นี่คือ Suspense Boundary ที่ช่วยป้องกัน Error เวลาเรียกใช้ useSearchParams ของ Next.js
+    <Suspense fallback={<div className="h-full flex items-center justify-center text-slate-500 font-bold">กำลังเตรียมหน้าจอ...</div>}>
       <MenuContent />
     </Suspense>
   );
